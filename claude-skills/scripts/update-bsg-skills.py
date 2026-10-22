@@ -56,8 +56,11 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-REPO = "beyond-scale-group/bsg-stack"
-BRANCH = "main"
+# Source repo/branch. Override with BSG_SKILLS_REPO / BSG_SKILLS_BRANCH to
+# install from a fork (e.g. `BSG_SKILLS_REPO=me/bsg-stack`). Empty values
+# fall back to the defaults.
+REPO = os.environ.get("BSG_SKILLS_REPO", "").strip() or "beyond-scale-group/bsg-stack"
+BRANCH = os.environ.get("BSG_SKILLS_BRANCH", "").strip() or "main"
 
 CLAUDE_DIR = Path(os.environ.get("CLAUDE_CONFIG_DIR", str(Path.home() / ".claude")))
 SCRIPTS_DIR = CLAUDE_DIR / "scripts"

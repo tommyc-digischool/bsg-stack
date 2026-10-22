@@ -10,8 +10,11 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-REPO = "beyond-scale-group/bsg-stack"
-BRANCH = "main"
+# Source repo/branch. Override with BSG_SKILLS_REPO / BSG_SKILLS_BRANCH to
+# install from a fork (e.g. `BSG_SKILLS_REPO=me/bsg-stack`). Empty values
+# fall back to the defaults.
+REPO = os.environ.get("BSG_SKILLS_REPO", "").strip() or "beyond-scale-group/bsg-stack"
+BRANCH = os.environ.get("BSG_SKILLS_BRANCH", "").strip() or "main"
 SCRIPT_NAME = "update-bsg-skills.py"
 # Opt-in SessionEnd hook that uploads the session transcript to a personal
 # gbrain. Registered for everyone (it no-ops without GBRAIN_INGEST_URL +
