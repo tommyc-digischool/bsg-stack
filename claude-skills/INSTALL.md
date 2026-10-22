@@ -67,6 +67,13 @@ No git clone, no script to run, no cron to set up.
 | `email-imap` | Read-only IMAP toolkit for mailboxes where OAuth (`google-workspace`) won't fly: client mailboxes, non-Google providers, OAuth apps stuck in Testing mode, admin-restricted domains. Ships pure-stdlib Python scripts (`imap-fetch.py` to download a date range as `.eml` + `index.json`, `imap-search.py` for IMAP-query searches, `imap-folders.py` to enumerate folders). Auth via app password (Gmail, iCloud, Fastmail) or basic auth (custom servers); credentials in env vars, never on disk. Not for sending — pair with SMTP or `google-workspace` for send flows. |
 | `pennylane` | Firm-level connector for the Pennylane accounting/finance platform (`pennylane.com`) — one OAuth 2.0 authorization reaches every company/structure a firm token can access. Ships a pure-stdlib Python client (`scripts/pennylane.py`) handling the auth-code flow, refresh-token rotation (atomic `0600` token store), cursor pagination, and the v2 JSON `filter` syntax against `api/external/v2`. Read/write customer & supplier invoices, customers, suppliers, ledger entries/accounts, products, categories; multi-company data export and bookkeeping (A/R, A/P, chart of accounts, VAT). Credentials in env vars, never on disk. Not the `pennylane` quantum-computing library. |
 | `new-issue` | Interviews a non-technical teammate to turn their request into a well-formed GitHub issue for the dev team, on `digischool-org/digischool.com` for now. Asks type (bug/feature/question/content), front vs. back, site/BO, and Figma link(s) when relevant; follows the house Context/Request/Expected outcome style; proposes an assignee or labels `needs-triage`; shows a draft for confirmation before creating with `gh issue create`. |
+| `update-workload-version` | Entry point of the Rancher/Tekton **preproduction** deployment skill set: updates an application's container image in the Rancher cluster `local` from a natural-language request ("update <app> to <tag> in preprod"). Orchestrates discovery → target resolution → Tekton build gate → explicit approval → PATCH → rollout verification; never touches production (GitOps only), never guesses a target or image, never rolls back automatically. Requires `RANCHER_URL`, `RANCHER_ACCESS_KEY`, `RANCHER_SECRET_KEY` env vars — setup in `references/deployment-guide.md`. |
+| `rancher-config` | Shared configuration for the Rancher deployment skills: reads the host from `RANCHER_URL` and API keys from `RANCHER_ACCESS_KEY` / `RANCHER_SECRET_KEY`, authenticates with HTTP Basic, resolves the preproduction cluster `local`, and returns the Kubernetes proxy base URL. Read-only. |
+| `discover-rancher-resources` | Read-only discovery of namespaces, Deployments, and containers in the Rancher preproduction cluster from a natural-language app description; ranks candidates by evidence (names, labels, image repository) and never guesses. |
+| `resolve-deployment-target` | Narrows discovery candidates to exactly one Deployment + container, asking the user to pick when several remain, then re-reads it for UID and latest `resourceVersion`. Selection is never treated as approval to mutate. |
+| `tekton-pipelineruns` | Read-only Tekton PipelineRun/TaskRun inspection in the `tekton-pipelines` namespace through the Rancher Kubernetes proxy (no `kubectl`, no dashboard): status tables, failed-build root cause with log excerpts, and the "Preproduction Deployment Gate" that blocks image updates until every build of the artifact succeeded. Never restarts, cancels, or retries runs. |
+| `update-deployment-image` | Mutation step of the Rancher deployment flow: strategic-merge PATCH of one approved container image in one preproduction Deployment, pinned to the latest `resourceVersion`, after revalidating the target and re-running the Tekton gate. Preserves the rest of the workload; hands off to `verify-rollout`. |
+| `verify-rollout` | Read-only check that a Deployment runs the expected image and its rollout is healthy (observedGeneration, updated/ready/available replicas, `ProgressDeadlineExceeded`), polling until success, failure, or timeout. |
 
 ## Available agents
 
@@ -306,6 +313,23 @@ That script — `update-bsg-skills.py` — does everything else:
 
 Re-running the install flow is just a way to reset to a known-good
 script if the local copy got corrupted or deleted.
+
+### Installing from a fork
+
+The updater pulls from `beyond-scale-group/bsg-stack@main` by default.
+To track a fork or another branch, set these environment variables
+where the `SessionStart` hook runs (e.g. the `env` block of
+`~/.claude/settings.json`, or your shell profile):
+
+| Variable | Default | Example |
+|---|---|---|
+| `BSG_SKILLS_REPO` | `beyond-scale-group/bsg-stack` | `me/bsg-stack` |
+| `BSG_SKILLS_BRANCH` | `main` | `main` |
+
+The updater also syncs its own code (`scripts/`) from that source, so
+the fork's `main` must already contain this override — otherwise the
+first sync replaces it with a version that ignores the variables. A
+fork stops receiving upstream changes until you sync it.
 
 ## Adding a new command, skill, or agent to the catalog
 
